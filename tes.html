@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PS4 Rental Timer</title>
+  <script defer>
+    document.addEventListener("DOMContentLoaded", () => {
+      const units = ["PS4-1", "PS4-2", "PS4-3"];
+      const unitContainer = document.getElementById("units");
+      const template = document.getElementById("unit-template");
+      const laporanTable = document.getElementById("laporan-body");
+      const rekapBody = document.getElementById("rekap-body");
+      const timers = {};
+      const totalDurasi = {};
+
+      units.forEach((name) => {
+        totalDurasi[name] = 0;
+        const clone = template.content.cloneNode(true);
+        const unitEl = clone.querySelector(".unit-name");
+        const startBtn = clone.querySelector(".start-btn");
+        const stopBtn = clone.querySelector(".stop-btn");
+        const countdownEl = clone.querySelector(".countdown");
+        const customerInput = clone.querySelector(".customer-name");
+        const timeInput = clone.querySelector(".rental-time");
+        const pelangganInfo = clone.querySelector(".pelanggan");
+
+        unitEl.textContent = name;
+
+        const updateCountdown = (unit, endTime) => {
+          const now = new Date().getTime();
+          const distance = endTime - now;
+
+          if (distance <= 0) {
+            clearInterval(timers[unit]);
+            countdownEl.textContent = "Waktu habis!";
+            stopBtn.classList.add("hidden");
+            startBtn.classList.remove("hidden");
+            return;
+          }
+
+          const minutes = Math.floor(distance / 60000);
+          const seconds = Math.floor((distance % 60000) / 1000);
+          countdownEl.textContent = `${minutes}m ${seconds}s`;
+        };
+
+        startBtn.addEventListener("click", () => {
+          const customer = customerInput.value.trim();
+          const time = parseInt(timeInput.value);
+          if (!customer || isNaN(time) || time <= 0) {
+            alert("Masukkan nama pelanggan dan durasi yang valid.");
+            return;
+          }
+
+          const startTime = new Date();
+          const endTime = startTime.getTime() + time * 60000;
+          pelangganInfo.textContent = `Pelanggan: ${customer}`;
+          countdownEl.textContent = "Memulai...";
+
+          timers[name] = setInterval(() => updateCountdown(name, endTime), 1000);
+
+          // Tambahkan ke laporan
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="border px-2 py-1">${new Date().toLocaleTimeString()}</td>
+            <td class="border px-2 py-1">${name}</td>
+            <td class="border px-2 py-1">${customer}</td>
+            <td class="border px-2 py-1">${time} menit</td>
+          `;
+          laporanTable.appendChild(row);
+
+          // Tambahkan durasi ke total
+          totalDurasi[name] += time;
+          updateRekap();
+
+          startBtn.classList.add("hidden");
+          stopBtn.classList.remove("hidden");
+        });
+
+        stopBtn.addEventListener("click", () => {
+          clearInterval(timers[name]);
+          countdownEl.textContent = "-";
+          pelangganInfo.textContent = "";
+          startBtn.classList.remove("hidden");
+          stopBtn.classList.add("hidden");
+        });
+
+        unitContainer.appendChild(clone);
+      });
+
+      function updateRekap() {
+        rekapBody.innerHTML = "";
+        for (const unit in totalDurasi) {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="border px-2 py-1">${unit}</td>
+            <td class="border px-2 py-1">${totalDurasi[unit]} menit</td>
+          `;
+          rekapBody.appendChild(row);
+        }
+      }
+    });
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 p-4">
+  <h1 class="text-3xl font-bold mb-6">Sistem Sewa PS4</h1>
+
+  <div id="units" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"></div>
+
+  <h2 class="text-2xl font-semibold mb-2">Laporan Harian</h2>
+  <div class="overflow-x-auto mb-6">
+    <table class="table-auto w-full border border-gray-300 text-sm">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border px-2 py-1">Jam</th>
+          <th class="border px-2 py-1">Unit</th>
+          <th class="border px-2 py-1">Pelanggan</th>
+          <th class="border px-2 py-1">Durasi</th>
+        </tr>
+      </thead>
+      <tbody id="laporan-body"></tbody>
+    </table>
+  </div>
+
+  <h2 class="text-2xl font-semibold mb-2">Total Durasi per Unit (Hari Ini)</h2>
+  <div class="overflow-x-auto">
+    <table class="table-auto w-full border border-gray-300 text-sm">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border px-2 py-1">Unit</th>
+          <th class="border px-2 py-1">Total Durasi</th>
+        </tr>
+      </thead>
+      <tbody id="rekap-body"></tbody>
+    </table>
+  </div>
+
+  <template id="unit-template">
+    <div class="bg-white rounded-2xl shadow p-4">
+      <h2 class="text-xl font-semibold">Unit: <span class="unit-name"></span></h2>
+      <div class="mt-2">
+        <input type="text" class="customer-name border p-2 w-full mb-2 rounded" placeholder="Nama pelanggan" />
+        <input type="number" class="rental-time border p-2 w-full mb-2 rounded" placeholder="Durasi (menit)" min="1" />
+        <button class="start-btn bg-green-500 text-white px-4 py-2 rounded">Mulai</button>
+        <button class="stop-btn bg-red-500 text-white px-4 py-2 rounded ml-2 hidden">Selesai</button>
+        <p class="mt-2 text-gray-700">Waktu tersisa: <span class="countdown">-</span></p>
+        <p class="text-sm text-gray-500 pelanggan"></p>
+      </div>
+    </div>
+  </template>
+</body>
+</html>
